@@ -212,7 +212,7 @@
       background: #141414;
       border: 1px solid #333;
       border-radius: 10px;
-      height: 220px;
+      height: 200px;
       display: flex;
       flex-direction: column;
       margin-bottom: 12px;
@@ -361,7 +361,7 @@
     </div>
 
     <div id="audio-avatar" class="call-avatar" style="display:none;">🎙️</div>
-    <div id="call-timer" class="timer">Chat Session</div>
+    <div id="call-timer" class="timer">00:00</div>
 
     <div class="chat-container">
       <div id="chat-messages" class="chat-messages"></div>
@@ -396,7 +396,6 @@
   let currentCallerId = "";
   let callTimerInterval = null;
   let secondsElapsed = 0;
-  let ringtoneOscillator = null;
   let ringtoneAudioContext = null;
   let facingMode = "user";
   let targetPeerId = "";
@@ -425,7 +424,6 @@
       peer.destroy();
     }
 
-    // Configured with standard Google STUN server for reliable P2P NAT traversal
     peer = new Peer(permanentId, {
       config: {
         iceServers: [
@@ -464,7 +462,7 @@
       console.error("PeerJS Error:", err);
       isPeerReady = false;
       if (err.type === 'unavailable-id') {
-        alert("This ID is already active in another tab/window. Auto-generating a new ID.");
+        alert("This ID is already active in another session. Generating a new unique ID.");
         localStorage.removeItem('dialer_permanent_id');
         initPermanentPeer();
       } else if (err.type === 'peer-unavailable') {
@@ -474,7 +472,7 @@
         const idElement = document.getElementById('my-id');
         idElement.innerText = "Error Connecting";
         idElement.style.color = "#ff5252";
-        updateStatus("Connection Failed - Check Internet", "#ff5252");
+        updateStatus("Connection Failed", "#ff5252");
       }
     });
 
@@ -491,13 +489,22 @@
     statusEl.style.color = color;
   }
 
+  function changePermanentID() {
+    const newId = prompt("Enter your custom Permanent ID:", currentCallerId);
+    if (newId && newId.trim() !== "" && newId !== currentCallerId) {
+      const cleanId = newId.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+      localStorage.setItem('dialer_permanent_id', cleanId);
+      initPermanentPeer();
+    }
+  }
+
   function showPage(pageId) {
     document.querySelectorAll('.page-view').forEach(el => el.classList.remove('active'));
     document.getElementById(pageId).classList.add('active');
   }
 
   function startChatOnly() {
-    if (!isPeerReady) return alert("Still connecting to network. Please wait a moment.");
+    if (!isPeerReady) return alert("Connecting to network... Please wait.");
 
     targetPeerId = document.getElementById('display').value.trim();
     
@@ -524,7 +531,7 @@
   }
 
   async function makeCall() {
-    if (!isPeerReady) return alert("Still connecting to network. Please wait a moment.");
+    if (!isPeerReady) return alert("Connecting to network... Please wait.");
 
     const targetId = document.getElementById('display').value.trim();
     if (!targetId) return alert("Please enter a Target ID to call.");
@@ -582,6 +589,31 @@
     });
   }
 
+  function rejectCall() {
+    stopRingtone();
+    if (incomingCallInstance) {
+      incomingCallInstance.close();
+    }
+    resetToDialPage();
+  }
+
+  function hangUp() {
+    stopRingtone();
+    if (activeCall) activeCall.close();
+    if (dataConnection) dataConnection.close();
+    stopLocalMediaStream();
+    resetToDialPage();
+  }
+
+  function resetToDialPage() {
+    stopTimer();
+    stopLocalMediaStream();
+    showPage('dial-page');
+    activeCall = null;
+    incomingCallInstance = null;
+    dataConnection = null;
+  }
+
   function setupDataConnection() {
     if (!dataConnection) return;
     
@@ -595,11 +627,7 @@
     });
 
     dataConnection.on('close', () => {
-      appendChatMessage("Connection closed.", "system");
-    });
-
-    dataConnection.on('error', err => {
-      console.error("Data channel error:", err);
+      appendChatMessage("Data connection closed.", "system");
     });
   }
 
@@ -656,13 +684,13 @@
       document.getElementById('local-video').srcObject = localStream;
       return true;
     } catch(err) {
-      console.warn("Could not access full media, attempting audio-only:", err);
+      console.warn("Could not obtain video, attempting audio-only fallback:", err);
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         document.getElementById('local-video').srcObject = null;
         return true;
       } catch(e) {
-        alert("Microphone/Camera permission is required to place calls.");
+        alert("Microphone/Camera permission is required to make calls.");
         return false;
       }
     }
@@ -680,24 +708,4 @@
     const remoteAudio = document.getElementById('remote-audio');
     
     remoteVideo.srcObject = remoteStream;
-    remoteAudio.srcObject = remoteStream;
-  }
-
-  function setupActiveCallView(hasVideo) {
-    document.getElementById('call-controls').style.display = 'grid';
-    document.getElementById('btn-leave').innerText = "End Call";
-
-    const videoViewport = document.getElementById('video-container');
-    const audioAvatar = document.getElementById('audio-avatar');
-    if (hasVideo) {
-      videoViewport.style.display = 'block';
-      audioAvatar.style.display = 'none';
-    } else {
-      videoViewport.style.display = 'none';
-      audioAvatar.style.display = 'flex';
-    }
-  }
-
-  function toggleMic() {
-    if (!localStream) return;
-    const audioT
+    remoteAudio.srcObjec
