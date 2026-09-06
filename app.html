@@ -142,7 +142,6 @@
     .page-view { display: none; }
     .page-view.active { display: block; }
 
-    /* Video Player Containers */
     .video-viewport {
       position: relative;
       width: 100%;
@@ -202,7 +201,6 @@
       margin-bottom: 12px;
     }
 
-    /* Live Chat Box */
     .chat-container {
       background: #141414;
       border: 1px solid #333;
@@ -262,7 +260,6 @@
     }
     .chat-input:focus { outline: none; }
 
-    /* Controls Grid */
     .controls-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -358,7 +355,6 @@
     <div id="audio-avatar" class="call-avatar" style="display:none;">🎙️</div>
     <div id="call-timer" class="timer">Chat Session</div>
 
-    <!-- Live Messaging Box -->
     <div class="chat-container">
       <div id="chat-messages" class="chat-messages"></div>
       <div class="chat-input-row">
@@ -384,39 +380,22 @@
 </div>
 
 <script>
-  let peer;
-  let activeCall;
-  let dataConnection;
-  let incomingCallInstance;
-  let localStream;
+  let peer = null;
+  let activeCall = null;
+  let dataConnection = null;
+  let incomingCallInstance = null;
+  let localStream = null;
   let currentCallerId = "";
-  let callTimerInterval;
+  let callTimerInterval = null;
   let secondsElapsed = 0;
-  let ringtoneAudioContext;
+  let ringtoneOscillator = null;
+  let ringtoneAudioContext = null;
   let facingMode = "user";
   let targetPeerId = "";
 
   window.addEventListener('DOMContentLoaded', () => {
-    promptMicrophoneAndCameraPermission();
+    initPermanentPeer();
   });
-
-  function promptMicrophoneAndCameraPermission(enableVideo = true) {
-    const constraints = { audio: true, video: enableVideo ? { facingMode: facingMode } : false };
-    navigator.mediaDevices.getUserMedia(constraints)
-      .then(stream => {
-        localStream = stream;
-        document.getElementById('local-video').srcObject = stream;
-        document.getElementById('my-id').innerText = "Initializing ID...";
-        if (!peer) initPermanentPeer();
-      })
-      .catch(err => {
-        if (enableVideo) {
-          promptMicrophoneAndCameraPermission(false);
-        } else {
-          if (!peer) initPermanentPeer();
-        }
-      });
-  }
 
   function getPermanentID() {
     let storedId = localStorage.getItem('dialer_permanent_id');
@@ -429,6 +408,11 @@
 
   function initPermanentPeer() {
     const permanentId = getPermanentID();
+    
+    if (peer) {
+      peer.destroy();
+    }
+
     peer = new Peer(permanentId);
 
     peer.on('open', id => {
@@ -456,12 +440,13 @@
     });
 
     peer.on('error', err => {
+      console.error("PeerJS Error:", err);
       if (err.type === 'unavailable-id') {
-        alert("This Permanent ID is active on another tab. Assigning a new ID.");
+        alert("This ID is already active in another window. Generating a new ID.");
         localStorage.removeItem('dialer_permanent_id');
         initPermanentPeer();
       } else if (err.type === 'peer-unavailable') {
-        appendChatMessage("User is offline or Target ID is incorrect.", "system");
+        appendChatMessage("Target ID is offline or invalid.", "system");
       } else {
         const idElement = document.getElementById('my-id');
         idElement.innerText = "Connection Error";
@@ -483,12 +468,12 @@
 
     if (targetPeerId) {
       appendChatMessage("Connecting to " + targetPeerId + "...", "system");
-      if (peer) {
+      if (peer && !peer.destroyed) {
         dataConnection = peer.connect(targetPeerId);
         setupDataConnection();
       }
     } else {
-      appendChatMessage("Chat mode opened. Enter a Target ID to connect.", "system");
+      appendChatMessage("Chat opened. Type a target ID above to connect.", "system");
     }
   }
 
@@ -502,12 +487,13 @@
 
   async function makeCall() {
     const targetId = document.getElementById('display').value.trim();
-    if (!targetId) return alert("Please enter a Target ID");
+    if (!targetId) return alert("Please enter a Target ID to call.");
 
     const wantsVideo = document.getElementById('video-toggle').checked;
-    await updateLocalMediaStream(wantsVideo);
+    const mediaReady = await obtainMediaStream(wantsVideo);
+    if (!mediaReady) return;
 
-    if (peer) {
+    if (peer && !peer.destroyed) {
       dataConnection = peer.connect(targetId);
       setupDataConnection();
 
@@ -523,6 +509,10 @@
       });
 
       call.on('close', resetToDialPage);
+      call.on('error', err => {
+        console.error("Call error:", err);
+        resetToDialPage();
+      });
     }
   }
 
@@ -531,7 +521,8 @@
     if (!incomingCallInstance) return;
 
     const wantsVideo = document.getElementById('video-toggle').checked;
-    await updateLocalMediaStream(wantsVideo);
+    const mediaReady = await obtainMediaStream(wantsVideo);
+    if (!mediaReady) return;
 
     incomingCallInstance.answer(localStream);
     activeCall = incomingCallInstance;
@@ -545,6 +536,10 @@
     });
 
     activeCall.on('close', resetToDialPage);
+    activeCall.on('error', err => {
+      console.error("Call error:", err);
+      resetToDialPage();
+    });
   }
 
   function setupDataConnection() {
@@ -562,6 +557,10 @@
     dataConnection.on('close', () => {
       appendChatMessage("Connection closed.", "system");
     });
+
+    dataConnection.on('error', err => {
+      console.error("Data channel error:", err);
+    });
   }
 
   function sendChatMessage() {
@@ -575,8 +574,8 @@
       input.value = '';
     } else {
       const targetId = document.getElementById('display').value.trim() || targetPeerId;
-      if (targetId && peer) {
-        appendChatMessage("Sending... Connecting to target.", "system");
+      if (targetId && peer && !peer.destroyed) {
+        appendChatMessage("Connecting to target...", "system");
         dataConnection = peer.connect(targetId);
         setupDataConnection();
         dataConnection.on('open', () => {
@@ -585,14 +584,14 @@
           input.value = '';
         });
       } else {
-        appendChatMessage("Please enter a Target ID on the main screen first.", "system");
+        appendChatMessage("Please enter a Target ID to send messages.", "system");
       }
     }
   }
 
   function shareIDInChat() {
     if (currentCallerId) {
-      const msg = "My Permanent Caller ID is: " + currentCallerId;
+      const msg = "My Caller ID is: " + currentCallerId;
       document.getElementById('chat-msg-input').value = msg;
       sendChatMessage();
     }
@@ -607,17 +606,33 @@
     box.scrollTop = box.scrollHeight;
   }
 
-  async function updateLocalMediaStream(includeVideo) {
-    if (localStream) {
-      localStream.getTracks().forEach(track => track.stop());
-    }
+  async function obtainMediaStream(includeVideo) {
+    stopLocalMediaStream();
     try {
       localStream = await navigator.mediaDevices.getUserMedia({
         audio: true,
         video: includeVideo ? { facingMode: facingMode } : false
       });
       document.getElementById('local-video').srcObject = localStream;
-    } catch(e) {}
+      return true;
+    } catch(err) {
+      console.warn("Could not access full media, attempting audio-only:", err);
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        document.getElementById('local-video').srcObject = null;
+        return true;
+      } catch(e) {
+        alert("Microphone/Camera permission is required to place calls.");
+        return false;
+      }
+    }
+  }
+
+  function stopLocalMediaStream() {
+    if (localStream) {
+      localStream.getTracks().forEach(track => track.stop());
+      localStream = null;
+    }
   }
 
   function attachRemoteStream(remoteStream) {
@@ -670,31 +685,13 @@
     const videoTrack = localStream ? localStream.getVideoTracks()[0] : null;
     const isVideoEnabled = videoTrack ? videoTrack.enabled : true;
 
-    await updateLocalMediaStream(true);
+    await obtainMediaStream(true);
 
-    if (activeCall) {
+    if (activeCall && activeCall.peerConnection) {
       const videoSender = activeCall.peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
-      if (videoSender && localStream.getVideoTracks()[0]) {
+      if (videoSender && localStream && localStream.getVideoTracks()[0]) {
         videoSender.replaceTrack(localStream.getVideoTracks()[0]);
       }
     }
     
-    if (!isVideoEnabled && localStream && localStream.getVideoTracks()[0]) {
-      localStream.getVideoTracks()[0].enabled = false;
-    }
-  }
-
-  function rejectCall() {
-    stopRingtone();
-    if (incomingCallInstance) incomingCallInstance.close();
-    resetToDialPage();
-  }
-
-  function hangUp() {
-    stopRingtone();
-    if (activeCall) activeCall.close();
-    if (dataConnection) dataConnection.close();
-    resetToDialPage();
-  }
-
-  funct
+    if (!isVideoEnabled && localStream && localStream.getVide
