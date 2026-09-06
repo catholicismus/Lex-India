@@ -708,4 +708,119 @@
     const remoteAudio = document.getElementById('remote-audio');
     
     remoteVideo.srcObject = remoteStream;
-    remoteAudio.srcObjec
+    remoteAudio.srcObject = remoteStream;
+  }
+
+  function setupActiveCallView(hasVideo) {
+    document.getElementById('call-controls').style.display = 'grid';
+    document.getElementById('btn-leave').innerText = "End Call";
+
+    const videoViewport = document.getElementById('video-container');
+    const audioAvatar = document.getElementById('audio-avatar');
+    if (hasVideo) {
+      videoViewport.style.display = 'block';
+      audioAvatar.style.display = 'none';
+    } else {
+      videoViewport.style.display = 'none';
+      audioAvatar.style.display = 'flex';
+    }
+  }
+
+  function toggleMic() {
+    if (!localStream) return;
+    const audioTrack = localStream.getAudioTracks()[0];
+    if (audioTrack) {
+      audioTrack.enabled = !audioTrack.enabled;
+      const btn = document.getElementById('btn-mic');
+      btn.innerText = audioTrack.enabled ? "Mic On" : "Mic Off";
+      btn.classList.toggle('off', !audioTrack.enabled);
+    }
+  }
+
+  function toggleCam() {
+    if (!localStream) return;
+    const videoTrack = localStream.getVideoTracks()[0];
+    if (videoTrack) {
+      videoTrack.enabled = !videoTrack.enabled;
+      const btn = document.getElementById('btn-cam');
+      btn.innerText = videoTrack.enabled ? "Cam On" : "Cam Off";
+      btn.classList.toggle('off', !videoTrack.enabled);
+    }
+  }
+
+  async function flipCamera() {
+    facingMode = (facingMode === "user") ? "environment" : "user";
+    const hasVideo = document.getElementById('video-toggle').checked;
+    await obtainMediaStream(hasVideo);
+    if (activeCall && localStream) {
+      const videoTrack = localStream.getVideoTracks()[0];
+      const sender = activeCall.peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
+      if (sender && videoTrack) {
+        sender.replaceTrack(videoTrack);
+      }
+    }
+  }
+
+  function startTimer() {
+    secondsElapsed = 0;
+    document.getElementById('call-timer').innerText = "00:00";
+    clearInterval(callTimerInterval);
+    callTimerInterval = setInterval(() => {
+      secondsElapsed++;
+      const mins = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
+      const secs = String(secondsElapsed % 60).padStart(2, '0');
+      document.getElementById('call-timer').innerText = `${mins}:${secs}`;
+    }, 1000);
+  }
+
+  function stopTimer() {
+    clearInterval(callTimerInterval);
+  }
+
+  function playRingtone() {
+    try {
+      ringtoneAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ringtoneAudioContext.createOscillator();
+      const gain = ringtoneAudioContext.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(440, ringtoneAudioContext.currentTime);
+      gain.gain.setValueAtTime(0.1, ringtoneAudioContext.currentTime);
+      osc.connect(gain);
+      gain.connect(ringtoneAudioContext.destination);
+      osc.start();
+      osc.stop(ringtoneAudioContext.currentTime + 3);
+    } catch(e) {}
+  }
+
+  function stopRingtone() {
+    if (ringtoneAudioContext) {
+      ringtoneAudioContext.close();
+      ringtoneAudioContext = null;
+    }
+  }
+
+  async function copyCallerID() {
+    if (!currentCallerId) return;
+    try {
+      await navigator.clipboard.writeText(currentCallerId);
+      const btn = document.getElementById('copy-btn');
+      btn.innerText = "Copied!";
+      setTimeout(() => { btn.innerText = "Copy"; }, 2000);
+    } catch (err) {
+      alert("Failed to copy automatically.");
+    }
+  }
+
+  async function pasteFromClipboard() {
+    try {
+      const text = await navigator.clipboard.readText();
+      document.getElementById('display').value = text.trim();
+    } catch (err) {
+      alert("Please manually paste using system tap-and-hold.");
+    }
+  }
+</script>
+
+</body>
+</html>
+
