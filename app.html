@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Data Dialer App</title>
+  <title>Data Dialer - Voice & Video</title>
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
     * {
@@ -25,9 +25,11 @@
       border-radius: 20px;
       padding: 24px;
       width: 100%;
-      max-width: 360px;
+      max-width: 380px;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
       text-align: center;
+      position: relative;
+      overflow: hidden;
     }
     .app-title {
       margin-top: 0;
@@ -81,7 +83,7 @@
     .display-container {
       display: flex;
       gap: 8px;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
     }
     .display {
       flex: 1;
@@ -99,8 +101,75 @@
       border-color: #29b6f6;
     }
 
+    /* Video Toggle Switch */
+    .call-mode-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      font-size: 0.9rem;
+      color: #aaa;
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #333;
+      transition: .3s;
+      border-radius: 24px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+    input:checked + .slider { background-color: #29b6f6; }
+    input:checked + .slider:before { transform: translateX(20px); }
+
     .page-view { display: none; }
     .page-view.active { display: block; }
+
+    /* Video Player Containers */
+    .video-viewport {
+      position: relative;
+      width: 100%;
+      height: 260px;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .remote-video { width: 100%; height: 100%; }
+    .local-video {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      width: 90px;
+      height: 120px;
+      border-radius: 8px;
+      border: 2px solid #fff;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      z-index: 10;
+    }
 
     .call-avatar {
       width: 80px;
@@ -131,8 +200,26 @@
     .timer {
       font-size: 0.9rem;
       color: #aaa;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
     }
+
+    /* Controls Grid */
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .btn-ctrl {
+      background: #2c2c2c;
+      border: 1px solid #444;
+      border-radius: 12px;
+      padding: 10px;
+      color: #fff;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .btn-ctrl.off { background: #ff9800; color: #000; }
 
     .actions { display: flex; gap: 12px; }
     .btn {
@@ -173,8 +260,17 @@
       <button class="btn-action" onclick="pasteFromClipboard()">Paste</button>
     </div>
 
+    <div class="call-mode-row">
+      <span>Audio Only</span>
+      <label class="switch">
+        <input type="checkbox" id="video-toggle" checked>
+        <span class="slider"></span>
+      </label>
+      <span>Enable Video</span>
+    </div>
+
     <div class="actions">
-      <button class="btn btn-call" onclick="makeCall()">Call</button>
+      <button class="btn btn-call" onclick="makeCall()">Start Call</button>
     </div>
   </div>
 
@@ -190,12 +286,22 @@
     </div>
   </div>
 
-  <!-- 3. SPEAKING PAGE -->
+  <!-- 3. SPEAKING / VIDEO PAGE -->
   <div id="speaking-page" class="page-view">
-    <div class="call-avatar">🎙️</div>
-    <div class="call-status-text">In Conversation</div>
+    <div id="video-container" class="video-viewport">
+      <video id="remote-video" class="remote-video" autoplay playsinline></video>
+      <video id="local-video" class="local-video" autoplay playsinline muted></video>
+    </div>
+
+    <div id="audio-avatar" class="call-avatar" style="display:none;">🎙️</div>
     <div id="call-timer" class="timer">00:00</div>
     
+    <div class="controls-grid">
+      <button id="btn-mic" class="btn-ctrl" onclick="toggleMic()">Mic On</button>
+      <button id="btn-cam" class="btn-ctrl" onclick="toggleCam()">Cam On</button>
+      <button id="btn-flip" class="btn-ctrl" onclick="flipCamera()">Flip Cam</button>
+    </div>
+
     <div class="actions">
       <button class="btn btn-end" onclick="hangUp()">End Call</button>
     </div>
@@ -213,24 +319,32 @@
   let callTimerInterval;
   let secondsElapsed = 0;
   let ringtoneAudioContext;
+  let facingMode = "user"; // 'user' for front, 'environment' for back
 
   window.addEventListener('DOMContentLoaded', () => {
-    promptMicrophonePermission();
+    promptMicrophoneAndCameraPermission();
   });
 
-  function promptMicrophonePermission() {
-    navigator.mediaDevices.getUserMedia({ audio: true })
+  function promptMicrophoneAndCameraPermission(enableVideo = true) {
+    const constraints = { audio: true, video: enableVideo ? { facingMode: facingMode } : false };
+    navigator.mediaDevices.getUserMedia(constraints)
       .then(stream => {
         localStream = stream;
+        document.getElementById('local-video').srcObject = stream;
         document.getElementById('my-id').innerText = "Initializing ID...";
-        initPermanentPeer();
+        if (!peer) initPermanentPeer();
       })
       .catch(err => {
-        const idElement = document.getElementById('my-id');
-        idElement.innerText = "Tap Here to Allow Mic";
-        idElement.style.color = "#ff9800";
-        idElement.style.cursor = "pointer";
-        idElement.onclick = promptMicrophonePermission;
+        // Fallback to audio-only if camera is blocked or missing
+        if (enableVideo) {
+          promptMicrophoneAndCameraPermission(false);
+        } else {
+          const idElement = document.getElementById('my-id');
+          idElement.innerText = "Tap Here to Allow Access";
+          idElement.style.color = "#ff9800";
+          idElement.style.cursor = "pointer";
+          idElement.onclick = () => promptMicrophoneAndCameraPermission(true);
+        }
       });
   }
 
@@ -245,7 +359,6 @@
 
   function initPermanentPeer() {
     const permanentId = getPermanentID();
-
     peer = new Peer(permanentId);
 
     peer.on('open', id => {
@@ -265,7 +378,7 @@
 
     peer.on('error', err => {
       if (err.type === 'unavailable-id') {
-        alert("This Permanent ID is already active on another device/tab. Assigning a new ID.");
+        alert("This Permanent ID is active on another tab. Assigning a new ID.");
         localStorage.removeItem('dialer_permanent_id');
         initPermanentPeer();
       } else {
@@ -276,76 +389,134 @@
     });
   }
 
-  function changePermanentID() {
-    const newId = prompt("Enter a custom Permanent ID (letters, numbers, hyphens only):", currentCallerId);
-    if (newId && newId.trim() !== "" && newId !== currentCallerId) {
-      const cleanId = newId.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
-      if (cleanId.length === 0) {
-        alert("Invalid ID format.");
-        return;
-      }
-      localStorage.setItem('dialer_permanent_id', cleanId);
-      if (peer) peer.destroy();
-      initPermanentPeer();
-    }
-  }
-
   function showPage(pageId) {
     document.querySelectorAll('.page-view').forEach(el => el.classList.remove('active'));
     document.getElementById(pageId).classList.add('active');
   }
 
-  function makeCall() {
+  async function makeCall() {
     const targetId = document.getElementById('display').value.trim();
-    if (!targetId || !localStream) return;
+    if (!targetId) return;
+
+    const wantsVideo = document.getElementById('video-toggle').checked;
+    await updateLocalMediaStream(wantsVideo);
 
     const call = peer.call(targetId, localStream);
     activeCall = call;
 
+    setupActiveCallView(wantsVideo);
     showPage('speaking-page');
     startTimer();
 
     call.on('stream', remoteStream => {
-      document.getElementById('remote-audio').srcObject = remoteStream;
+      attachRemoteStream(remoteStream);
     });
 
-    call.on('close', () => {
-      resetToDialPage();
-    });
+    call.on('close', resetToDialPage);
   }
 
-  function acceptCall() {
+  async function acceptCall() {
     stopRingtone();
     if (!incomingCallInstance) return;
+
+    const wantsVideo = document.getElementById('video-toggle').checked;
+    await updateLocalMediaStream(wantsVideo);
 
     incomingCallInstance.answer(localStream);
     activeCall = incomingCallInstance;
 
+    setupActiveCallView(wantsVideo);
     showPage('speaking-page');
     startTimer();
 
     activeCall.on('stream', remoteStream => {
-      document.getElementById('remote-audio').srcObject = remoteStream;
+      attachRemoteStream(remoteStream);
     });
 
-    activeCall.on('close', () => {
-      resetToDialPage();
+    activeCall.on('close', resetToDialPage);
+  }
+
+  async function updateLocalMediaStream(includeVideo) {
+    if (localStream) {
+      localStream.getTracks().forEach(track => track.stop());
+    }
+    localStream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: includeVideo ? { facingMode: facingMode } : false
     });
+    document.getElementById('local-video').srcObject = localStream;
+  }
+
+  function attachRemoteStream(remoteStream) {
+    const remoteVideo = document.getElementById('remote-video');
+    const remoteAudio = document.getElementById('remote-audio');
+    
+    remoteVideo.srcObject = remoteStream;
+    remoteAudio.srcObject = remoteStream;
+  }
+
+  function setupActiveCallView(hasVideo) {
+    const videoViewport = document.getElementById('video-container');
+    const audioAvatar = document.getElementById('audio-avatar');
+    if (hasVideo) {
+      videoViewport.style.display = 'block';
+      audioAvatar.style.display = 'none';
+    } else {
+      videoViewport.style.display = 'none';
+      audioAvatar.style.display = 'flex';
+    }
+  }
+
+  function toggleMic() {
+    if (!localStream) return;
+    const audioTrack = localStream.getAudioTracks()[0];
+    if (audioTrack) {
+      audioTrack.enabled = !audioTrack.enabled;
+      const btn = document.getElementById('btn-mic');
+      btn.innerText = audioTrack.enabled ? "Mic On" : "Mic Off";
+      btn.classList.toggle('off', !audioTrack.enabled);
+    }
+  }
+
+  function toggleCam() {
+    if (!localStream) return;
+    const videoTrack = localStream.getVideoTracks()[0];
+    if (videoTrack) {
+      videoTrack.enabled = !videoTrack.enabled;
+      const btn = document.getElementById('btn-cam');
+      btn.innerText = videoTrack.enabled ? "Cam On" : "Cam Off";
+      btn.classList.toggle('off', !videoTrack.enabled);
+    }
+  }
+
+  async function flipCamera() {
+    facingMode = (facingMode === "user") ? "environment" : "user";
+    const videoTrack = localStream.getVideoTracks()[0];
+    const isVideoEnabled = videoTrack ? videoTrack.enabled : true;
+
+    await updateLocalMediaStream(true);
+
+    if (activeCall) {
+      const videoSender = activeCall.peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
+      if (videoSender) {
+        videoSender.replaceTrack(localStream.getVideoTracks()[0]);
+      }
+    }
+    
+    if (!isVideoEnabled) {
+      localStream.getVideoTracks()[0].enabled = false;
+    }
   }
 
   function rejectCall() {
     stopRingtone();
-    if (incomingCallInstance) {
-      incomingCallInstance.close();
-    }
+    if (incomingCallInstance) incomingCallInstance.close();
     resetToDialPage();
   }
 
   function hangUp() {
     stopRingtone();
-    if (activeCall) {
-      activeCall.close();
-    }
+    if (activeCall) activeCall.close();
     resetToDialPage();
   }
 
@@ -391,6 +562,17 @@
     if (ringtoneAudioContext) {
       ringtoneAudioContext.close();
       ringtoneAudioContext = null;
+    }
+  }
+
+  function changePermanentID() {
+    const newId = prompt("Enter a custom Permanent ID:", currentCallerId);
+    if (newId && newId.trim() !== "" && newId !== currentCallerId) {
+      const cleanId = newId.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+      if (cleanId.length === 0) return alert("Invalid ID format.");
+      localStorage.setItem('dialer_permanent_id', cleanId);
+      if (peer) peer.destroy();
+      initPermanentPeer();
     }
   }
 
