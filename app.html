@@ -66,6 +66,13 @@
       text-align: left;
       flex: 1;
     }
+    .status-badge {
+      font-size: 0.75rem;
+      color: #ffa726;
+      font-weight: normal;
+      display: block;
+      margin-top: 4px;
+    }
     .btn-action {
       background: #333;
       border: 1px solid #444;
@@ -311,6 +318,7 @@
         <button id="copy-btn" class="btn-action" onclick="copyCallerID()">Copy</button>
         <button class="btn-action" onclick="changePermanentID()">Edit</button>
       </div>
+      <span id="conn-status" class="status-badge">Connecting to Peer Server...</span>
     </div>
     
     <div class="display-container">
@@ -392,6 +400,7 @@
   let ringtoneAudioContext = null;
   let facingMode = "user";
   let targetPeerId = "";
+  let isPeerReady = false;
 
   window.addEventListener('DOMContentLoaded', () => {
     initPermanentPeer();
@@ -408,19 +417,31 @@
 
   function initPermanentPeer() {
     const permanentId = getPermanentID();
+    isPeerReady = false;
     
+    updateStatus("Connecting to server...", "#ffa726");
+
     if (peer) {
       peer.destroy();
     }
 
-    peer = new Peer(permanentId);
+    // Configured with standard Google STUN server for reliable P2P NAT traversal
+    peer = new Peer(permanentId, {
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+      }
+    });
 
     peer.on('open', id => {
       currentCallerId = id;
+      isPeerReady = true;
       const idElement = document.getElementById('my-id');
       idElement.innerText = id;
       idElement.style.color = "#00e676";
-      idElement.onclick = null;
+      updateStatus("Online - Ready to Connect", "#00e676");
     });
 
     peer.on('connection', conn => {
@@ -441,18 +462,33 @@
 
     peer.on('error', err => {
       console.error("PeerJS Error:", err);
+      isPeerReady = false;
       if (err.type === 'unavailable-id') {
-        alert("This ID is already active in another window. Generating a new ID.");
+        alert("This ID is already active in another tab/window. Auto-generating a new ID.");
         localStorage.removeItem('dialer_permanent_id');
         initPermanentPeer();
       } else if (err.type === 'peer-unavailable') {
-        appendChatMessage("Target ID is offline or invalid.", "system");
+        appendChatMessage("Target ID is offline or does not exist.", "system");
+        alert("Target ID is offline or does not exist.");
       } else {
         const idElement = document.getElementById('my-id');
-        idElement.innerText = "Connection Error";
+        idElement.innerText = "Error Connecting";
         idElement.style.color = "#ff5252";
+        updateStatus("Connection Failed - Check Internet", "#ff5252");
       }
     });
+
+    peer.on('disconnected', () => {
+      isPeerReady = false;
+      updateStatus("Disconnected - Reconnecting...", "#ffa726");
+      peer.reconnect();
+    });
+  }
+
+  function updateStatus(msg, color) {
+    const statusEl = document.getElementById('conn-status');
+    statusEl.innerText = msg;
+    statusEl.style.color = color;
   }
 
   function showPage(pageId) {
@@ -461,6 +497,8 @@
   }
 
   function startChatOnly() {
+    if (!isPeerReady) return alert("Still connecting to network. Please wait a moment.");
+
     targetPeerId = document.getElementById('display').value.trim();
     
     setupChatOnlyView(targetPeerId || "Direct Chat");
@@ -486,6 +524,8 @@
   }
 
   async function makeCall() {
+    if (!isPeerReady) return alert("Still connecting to network. Please wait a moment.");
+
     const targetId = document.getElementById('display').value.trim();
     if (!targetId) return alert("Please enter a Target ID to call.");
 
@@ -660,38 +700,4 @@
 
   function toggleMic() {
     if (!localStream) return;
-    const audioTrack = localStream.getAudioTracks()[0];
-    if (audioTrack) {
-      audioTrack.enabled = !audioTrack.enabled;
-      const btn = document.getElementById('btn-mic');
-      btn.innerText = audioTrack.enabled ? "Mic On" : "Mic Off";
-      btn.classList.toggle('off', !audioTrack.enabled);
-    }
-  }
-
-  function toggleCam() {
-    if (!localStream) return;
-    const videoTrack = localStream.getVideoTracks()[0];
-    if (videoTrack) {
-      videoTrack.enabled = !videoTrack.enabled;
-      const btn = document.getElementById('btn-cam');
-      btn.innerText = videoTrack.enabled ? "Cam On" : "Cam Off";
-      btn.classList.toggle('off', !videoTrack.enabled);
-    }
-  }
-
-  async function flipCamera() {
-    facingMode = (facingMode === "user") ? "environment" : "user";
-    const videoTrack = localStream ? localStream.getVideoTracks()[0] : null;
-    const isVideoEnabled = videoTrack ? videoTrack.enabled : true;
-
-    await obtainMediaStream(true);
-
-    if (activeCall && activeCall.peerConnection) {
-      const videoSender = activeCall.peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
-      if (videoSender && localStream && localStream.getVideoTracks()[0]) {
-        videoSender.replaceTrack(localStream.getVideoTracks()[0]);
-      }
-    }
-    
-    if (!isVideoEnabled && localStream && localStream.getVide
+    const audioT
