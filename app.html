@@ -29,8 +29,8 @@
       background: #2a2a2a;
       border: 1px solid #333;
       border-radius: 10px;
-      padding: 10px;
-      margin-bottom: 16px;
+      padding: 12px;
+      margin-bottom: 20px;
     }
     .id-label {
       font-size: 0.75rem;
@@ -69,7 +69,7 @@
     .display-container {
       display: flex;
       gap: 8px;
-      margin-bottom: 16px;
+      margin-bottom: 20px;
     }
     .display {
       flex: 1;
@@ -96,28 +96,49 @@
       cursor: pointer;
     }
     .btn-paste:active { background: #444; }
-    
-    .keypad-nums {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-    .key-num {
-      background: #2c2c2c;
-      border: none;
-      border-radius: 12px;
-      height: 48px;
-      font-size: 1.2rem;
-      color: #fff;
-      cursor: pointer;
-    }
-    .key-num:active { background: #444; }
 
-    .actions { display: flex; gap: 10px; }
+    /* Page Views */
+    .page-view { display: none; }
+    .page-view.active { display: block; }
+
+    /* Speaking & Calling Visuals */
+    .call-avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: #2a2a2a;
+      border: 2px solid #29b6f6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      margin: 0 auto 16px;
+    }
+    .incoming-avatar {
+      border-color: #00c853;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 200, 83, 0.4); }
+      70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(0, 200, 83, 0); }
+      100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 200, 83, 0); }
+    }
+    .call-status-text {
+      font-size: 1.1rem;
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+    .timer {
+      font-size: 0.9rem;
+      color: #aaa;
+      margin-bottom: 24px;
+    }
+
+    /* Buttons */
+    .actions { display: flex; gap: 12px; }
     .btn {
       flex: 1;
-      padding: 12px;
+      padding: 14px;
       border: none;
       border-radius: 25px;
       font-weight: bold;
@@ -125,7 +146,9 @@
       cursor: pointer;
     }
     .btn-call { background: #00c853; color: white; }
-    .btn-hangup { background: #d50000; color: white; }
+    .btn-accept { background: #00c853; color: white; }
+    .btn-reject { background: #d50000; color: white; }
+    .btn-end { background: #d50000; color: white; width: 100%; }
   </style>
 </head>
 <body>
@@ -133,37 +156,44 @@
 <div class="dialer-card">
   <h3>Web Data Dialer</h3>
 
-  <div class="id-banner">
-    <div class="id-label">Your Caller ID</div>
-    <div class="id-row">
-      <div id="my-id" class="id-value">Requesting Mic Access...</div>
-      <button id="copy-btn" class="btn-copy" onclick="copyCallerID()" style="display:none;">Copy</button>
+  <div id="dial-page" class="page-view active">
+    <div class="id-banner">
+      <div class="id-label">Your Caller ID</div>
+      <div class="id-row">
+        <div id="my-id" class="id-value">Requesting Mic Access...</div>
+        <button id="copy-btn" class="btn-copy" onclick="copyCallerID()" style="display:none;">Copy</button>
+      </div>
+    </div>
+    
+    <div class="display-container">
+      <input type="text" id="display" class="display" placeholder="Tap to enter Target ID" />
+      <button class="btn-paste" onclick="pasteFromClipboard()">Paste</button>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-call" onclick="makeCall()">Call</button>
     </div>
   </div>
-  
-  <div class="display-container">
-    <input type="text" id="display" class="display" placeholder="Tap to type Target ID" />
-    <button class="btn-paste" onclick="pasteFromClipboard()">Paste</button>
+
+  <div id="receive-page" class="page-view">
+    <div class="call-avatar incoming-avatar">📞</div>
+    <div class="call-status-text">Incoming Call...</div>
+    <div id="caller-id-display" class="timer">Unknown Caller</div>
+    
+    <div class="actions">
+      <button class="btn btn-accept" onclick="acceptCall()">Accept</button>
+      <button class="btn btn-reject" onclick="rejectCall()">Reject</button>
+    </div>
   </div>
 
-  <div class="keypad-nums">
-    <button class="key-num" onclick="append('1')">1</button>
-    <button class="key-num" onclick="append('2')">2</button>
-    <button class="key-num" onclick="append('3')">3</button>
-    <button class="key-num" onclick="append('4')">4</button>
-    <button class="key-num" onclick="append('5')">5</button>
-    <button class="key-num" onclick="append('6')">6</button>
-    <button class="key-num" onclick="append('7')">7</button>
-    <button class="key-num" onclick="append('8')">8</button>
-    <button class="key-num" onclick="append('9')">9</button>
-    <button class="key-num" onclick="append('-')">-</button>
-    <button class="key-num" onclick="append('0')">0</button>
-    <button class="key-num" onclick="clearDisplay()">⌫</button>
-  </div>
-
-  <div class="actions">
-    <button class="btn btn-call" onclick="makeCall()">Call</button>
-    <button class="btn btn-hangup" onclick="hangUp()">End</button>
+  <div id="speaking-page" class="page-view">
+    <div class="call-avatar">🎙️</div>
+    <div class="call-status-text">In Conversation</div>
+    <div id="call-timer" class="timer">00:00</div>
+    
+    <div class="actions">
+      <button class="btn btn-end" onclick="hangUp()">End Call</button>
+    </div>
   </div>
   
   <audio id="remote-audio" autoplay></audio>
@@ -172,8 +202,12 @@
 <script>
   let peer;
   let activeCall;
+  let incomingCallInstance;
   let localStream;
   let currentCallerId = "";
+  let callTimerInterval;
+  let secondsElapsed = 0;
+  let ringtoneAudioContext;
 
   window.addEventListener('DOMContentLoaded', () => {
     promptMicrophonePermission();
@@ -208,11 +242,10 @@
     });
 
     peer.on('call', call => {
-      call.answer(localStream);
-      activeCall = call;
-      call.on('stream', remoteStream => {
-        document.getElementById('remote-audio').srcObject = remoteStream;
-      });
+      incomingCallInstance = call;
+      document.getElementById('caller-id-display').innerText = call.peer;
+      showPage('receive-page');
+      playRingtone();
     });
 
     peer.on('error', err => {
@@ -223,34 +256,9 @@
     });
   }
 
-  async function copyCallerID() {
-    if (!currentCallerId) return;
-    try {
-      await navigator.clipboard.writeText(currentCallerId);
-      const btn = document.getElementById('copy-btn');
-      btn.innerText = "Copied!";
-      setTimeout(() => { btn.innerText = "Copy"; }, 2000);
-    } catch (err) {
-      alert("Failed to copy automatically. Please select text manually.");
-    }
-  }
-
-  function append(val) {
-    document.getElementById('display').value += val;
-  }
-
-  function clearDisplay() {
-    let current = document.getElementById('display').value;
-    document.getElementById('display').value = current.slice(0, -1);
-  }
-
-  async function pasteFromClipboard() {
-    try {
-      const text = await navigator.clipboard.readText();
-      document.getElementById('display').value = text.trim();
-    } catch (err) {
-      alert("Please manually paste using system long-press.");
-    }
+  function showPage(pageId) {
+    document.querySelectorAll('.page-view').forEach(el => el.classList.remove('active'));
+    document.getElementById(pageId).classList.add('active');
   }
 
   function makeCall() {
@@ -260,14 +268,119 @@
     const call = peer.call(targetId, localStream);
     activeCall = call;
 
+    showPage('speaking-page');
+    startTimer();
+
     call.on('stream', remoteStream => {
       document.getElementById('remote-audio').srcObject = remoteStream;
     });
+
+    call.on('close', () => {
+      resetToDialPage();
+    });
+  }
+
+  function acceptCall() {
+    stopRingtone();
+    if (!incomingCallInstance) return;
+
+    incomingCallInstance.answer(localStream);
+    activeCall = incomingCallInstance;
+
+    showPage('speaking-page');
+    startTimer();
+
+    activeCall.on('stream', remoteStream => {
+      document.getElementById('remote-audio').srcObject = remoteStream;
+    });
+
+    activeCall.on('close', () => {
+      resetToDialPage();
+    });
+  }
+
+  function rejectCall() {
+    stopRingtone();
+    if (incomingCallInstance) {
+      incomingCallInstance.close();
+    }
+    resetToDialPage();
   }
 
   function hangUp() {
+    stopRingtone();
     if (activeCall) {
       activeCall.close();
+    }
+    resetToDialPage();
+  }
+
+  function resetToDialPage() {
+    stopTimer();
+    showPage('dial-page');
+    activeCall = null;
+    incomingCallInstance = null;
+  }
+
+  /* Timer Logic */
+  function startTimer() {
+    secondsElapsed = 0;
+    document.getElementById('call-timer').innerText = "00:00";
+    clearInterval(callTimerInterval);
+    callTimerInterval = setInterval(() => {
+      secondsElapsed++;
+      const mins = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
+      const secs = String(secondsElapsed % 60).padStart(2, '0');
+      document.getElementById('call-timer').innerText = `${mins}:${secs}`;
+    }, 1000);
+  }
+
+  function stopTimer() {
+    clearInterval(callTimerInterval);
+  }
+
+  /* Generated Tone Sound */
+  function playRingtone() {
+    try {
+      ringtoneAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ringtoneAudioContext.createOscillator();
+      const gain = ringtoneAudioContext.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(440, ringtoneAudioContext.currentTime);
+      gain.gain.setValueAtTime(0.1, ringtoneAudioContext.currentTime);
+      osc.connect(gain);
+      gain.connect(ringtoneAudioContext.destination);
+      osc.start();
+      osc.stop(ringtoneAudioContext.currentTime + 3);
+    } catch(e) {}
+  }
+
+  function stopRingtone() {
+    if (ringtoneAudioContext) {
+      ringtoneAudioContext.close();
+      ringtoneAudioContext = null;
+    }
+  }
+
+  /* Utilities */
+  async function copyCallerID() {
+    if (!currentCallerId) return;
+    try {
+      await navigator.clipboard.writeText(currentCallerId);
+      const btn = document.getElementById('copy-btn');
+      btn.innerText = "Copied!";
+      setTimeout(() => { btn.innerText = "Copy"; }, 2000);
+    } catch (err) {
+      alert("Failed to copy automatically.");
+    }
+  }
+
+  async function pasteFromClipboard() {
+    try {
+      const text = await navigator.clipboard.readText();
+      document.getElementById('display').value = text.trim();
+    } catch (err) {
+      alert("Please manually paste using system long-press.");
     }
   }
 </script>
