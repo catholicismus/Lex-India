@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Data Dialer - Voice & Video</title>
+  <title>Data Dialer & Chat</title>
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
     * {
@@ -23,7 +23,7 @@
     .dialer-card {
       background: #1e1e1e;
       border-radius: 20px;
-      padding: 24px;
+      padding: 20px;
       width: 100%;
       max-width: 380px;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
@@ -33,7 +33,7 @@
     }
     .app-title {
       margin-top: 0;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
       font-size: 1.25rem;
       font-weight: 600;
       color: #e0e0e0;
@@ -43,7 +43,7 @@
       border: 1px solid #333;
       border-radius: 12px;
       padding: 12px;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
     }
     .id-label {
       font-size: 0.75rem;
@@ -83,7 +83,7 @@
     .display-container {
       display: flex;
       gap: 8px;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
     }
     .display {
       flex: 1;
@@ -101,13 +101,12 @@
       border-color: #29b6f6;
     }
 
-    /* Video Toggle Switch */
     .call-mode-row {
       display: flex;
       justify-content: center;
       align-items: center;
       gap: 10px;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
       font-size: 0.9rem;
       color: #aaa;
     }
@@ -147,11 +146,11 @@
     .video-viewport {
       position: relative;
       width: 100%;
-      height: 260px;
+      height: 220px;
       background: #000;
       border-radius: 12px;
       overflow: hidden;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
     }
     video {
       width: 100%;
@@ -163,8 +162,8 @@
       position: absolute;
       bottom: 10px;
       right: 10px;
-      width: 90px;
-      height: 120px;
+      width: 80px;
+      height: 100px;
       border-radius: 8px;
       border: 2px solid #fff;
       box-shadow: 0 4px 10px rgba(0,0,0,0.5);
@@ -172,16 +171,16 @@
     }
 
     .call-avatar {
-      width: 80px;
-      height: 80px;
+      width: 70px;
+      height: 70px;
       border-radius: 50%;
       background: #2a2a2a;
       border: 2px solid #29b6f6;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 2rem;
-      margin: 0 auto 16px;
+      font-size: 1.8rem;
+      margin: 0 auto 12px;
     }
     .incoming-avatar {
       border-color: #00c853;
@@ -193,56 +192,118 @@
       100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 200, 83, 0); }
     }
     .call-status-text {
-      font-size: 1.1rem;
+      font-size: 1rem;
       font-weight: bold;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
     .timer {
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       color: #aaa;
-      margin-bottom: 20px;
+      margin-bottom: 12px;
     }
+
+    /* Live Chat Box */
+    .chat-container {
+      background: #141414;
+      border: 1px solid #333;
+      border-radius: 10px;
+      height: 220px;
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 12px;
+    }
+    .chat-messages {
+      flex: 1;
+      padding: 8px;
+      overflow-y: auto;
+      text-align: left;
+      font-size: 0.82rem;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .msg {
+      padding: 6px 10px;
+      border-radius: 12px;
+      max-width: 80%;
+      word-break: break-word;
+    }
+    .msg.me {
+      background: #0288d1;
+      align-self: flex-end;
+      color: #fff;
+    }
+    .msg.them {
+      background: #333;
+      align-self: flex-start;
+      color: #fff;
+    }
+    .msg.system {
+      background: transparent;
+      color: #888;
+      align-self: center;
+      font-size: 0.75rem;
+      font-style: italic;
+    }
+    .chat-input-row {
+      display: flex;
+      padding: 6px;
+      gap: 6px;
+      border-top: 1px solid #222;
+    }
+    .chat-input {
+      flex: 1;
+      background: #222;
+      border: none;
+      color: #fff;
+      padding: 6px 8px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+    }
+    .chat-input:focus { outline: none; }
 
     /* Controls Grid */
     .controls-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
+      gap: 8px;
       margin-bottom: 12px;
     }
     .btn-ctrl {
       background: #2c2c2c;
       border: 1px solid #444;
-      border-radius: 12px;
-      padding: 10px;
+      border-radius: 10px;
+      padding: 8px;
       color: #fff;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       cursor: pointer;
     }
     .btn-ctrl.off { background: #ff9800; color: #000; }
 
-    .actions { display: flex; gap: 12px; }
+    .actions { display: flex; gap: 10px; }
     .btn {
       flex: 1;
-      padding: 14px;
+      padding: 12px;
       border: none;
-      border-radius: 25px;
+      border-radius: 20px;
       font-weight: bold;
-      font-size: 1rem;
+      font-size: 0.95rem;
       cursor: pointer;
       transition: opacity 0.2s;
     }
     .btn:active { opacity: 0.8; }
     .btn-call { background: #00c853; color: white; }
+    .btn-chat { background: #0288d1; color: white; }
     .btn-accept { background: #00c853; color: white; }
     .btn-reject { background: #d50000; color: white; }
     .btn-end { background: #d50000; color: white; width: 100%; }
+    .btn-share { background: #00838f; color: white; width: 100%; margin-bottom: 12px; }
   </style>
 </head>
 <body>
 
 <div class="dialer-card">
-  <h3 class="app-title">Web Data Dialer</h3>
+  <h3 class="app-title">Web Data Dialer & Chat</h3>
 
   <!-- 1. DIAL PAGE -->
   <div id="dial-page" class="page-view active">
@@ -270,6 +331,7 @@
     </div>
 
     <div class="actions">
+      <button class="btn btn-chat" onclick="startChatOnly()">Chat</button>
       <button class="btn btn-call" onclick="makeCall()">Start Call</button>
     </div>
   </div>
@@ -286,7 +348,7 @@
     </div>
   </div>
 
-  <!-- 3. SPEAKING / VIDEO PAGE -->
+  <!-- 3. SPEAKING / VIDEO / CHAT PAGE -->
   <div id="speaking-page" class="page-view">
     <div id="video-container" class="video-viewport">
       <video id="remote-video" class="remote-video" autoplay playsinline></video>
@@ -294,16 +356,27 @@
     </div>
 
     <div id="audio-avatar" class="call-avatar" style="display:none;">🎙️</div>
-    <div id="call-timer" class="timer">00:00</div>
-    
-    <div class="controls-grid">
+    <div id="call-timer" class="timer">Chat Session</div>
+
+    <!-- Live Messaging Box -->
+    <div class="chat-container">
+      <div id="chat-messages" class="chat-messages"></div>
+      <div class="chat-input-row">
+        <input type="text" id="chat-msg-input" class="chat-input" placeholder="Type a message..." onkeydown="if(event.key==='Enter') sendChatMessage()" />
+        <button class="btn-action" onclick="sendChatMessage()">Send</button>
+      </div>
+    </div>
+
+    <button class="btn-action btn-share" onclick="shareIDInChat()">Share My ID in Chat</button>
+
+    <div id="call-controls" class="controls-grid">
       <button id="btn-mic" class="btn-ctrl" onclick="toggleMic()">Mic On</button>
       <button id="btn-cam" class="btn-ctrl" onclick="toggleCam()">Cam On</button>
       <button id="btn-flip" class="btn-ctrl" onclick="flipCamera()">Flip Cam</button>
     </div>
 
     <div class="actions">
-      <button class="btn btn-end" onclick="hangUp()">End Call</button>
+      <button id="btn-leave" class="btn btn-end" onclick="hangUp()">End Session</button>
     </div>
   </div>
   
@@ -313,13 +386,15 @@
 <script>
   let peer;
   let activeCall;
+  let dataConnection;
   let incomingCallInstance;
   let localStream;
   let currentCallerId = "";
   let callTimerInterval;
   let secondsElapsed = 0;
   let ringtoneAudioContext;
-  let facingMode = "user"; // 'user' for front, 'environment' for back
+  let facingMode = "user";
+  let targetPeerId = "";
 
   window.addEventListener('DOMContentLoaded', () => {
     promptMicrophoneAndCameraPermission();
@@ -335,15 +410,10 @@
         if (!peer) initPermanentPeer();
       })
       .catch(err => {
-        // Fallback to audio-only if camera is blocked or missing
         if (enableVideo) {
           promptMicrophoneAndCameraPermission(false);
         } else {
-          const idElement = document.getElementById('my-id');
-          idElement.innerText = "Tap Here to Allow Access";
-          idElement.style.color = "#ff9800";
-          idElement.style.cursor = "pointer";
-          idElement.onclick = () => promptMicrophoneAndCameraPermission(true);
+          if (!peer) initPermanentPeer();
         }
       });
   }
@@ -369,6 +439,15 @@
       idElement.onclick = null;
     });
 
+    peer.on('connection', conn => {
+      dataConnection = conn;
+      setupDataConnection();
+      if (!activeCall) {
+        setupChatOnlyView(conn.peer);
+        showPage('speaking-page');
+      }
+    });
+
     peer.on('call', call => {
       incomingCallInstance = call;
       document.getElementById('caller-id-display').innerText = call.peer;
@@ -381,6 +460,8 @@
         alert("This Permanent ID is active on another tab. Assigning a new ID.");
         localStorage.removeItem('dialer_permanent_id');
         initPermanentPeer();
+      } else if (err.type === 'peer-unavailable') {
+        appendChatMessage("User is offline or Target ID is incorrect.", "system");
       } else {
         const idElement = document.getElementById('my-id');
         idElement.innerText = "Connection Error";
@@ -394,25 +475,55 @@
     document.getElementById(pageId).classList.add('active');
   }
 
+  function startChatOnly() {
+    targetPeerId = document.getElementById('display').value.trim();
+    
+    setupChatOnlyView(targetPeerId || "Direct Chat");
+    showPage('speaking-page');
+
+    if (targetPeerId) {
+      appendChatMessage("Connecting to " + targetPeerId + "...", "system");
+      if (peer) {
+        dataConnection = peer.connect(targetPeerId);
+        setupDataConnection();
+      }
+    } else {
+      appendChatMessage("Chat mode opened. Enter a Target ID to connect.", "system");
+    }
+  }
+
+  function setupChatOnlyView(recipient) {
+    document.getElementById('video-container').style.display = 'none';
+    document.getElementById('audio-avatar').style.display = 'none';
+    document.getElementById('call-controls').style.display = 'none';
+    document.getElementById('call-timer').innerText = "Chat with: " + (recipient || "Unknown");
+    document.getElementById('btn-leave').innerText = "Close Chat";
+  }
+
   async function makeCall() {
     const targetId = document.getElementById('display').value.trim();
-    if (!targetId) return;
+    if (!targetId) return alert("Please enter a Target ID");
 
     const wantsVideo = document.getElementById('video-toggle').checked;
     await updateLocalMediaStream(wantsVideo);
 
-    const call = peer.call(targetId, localStream);
-    activeCall = call;
+    if (peer) {
+      dataConnection = peer.connect(targetId);
+      setupDataConnection();
 
-    setupActiveCallView(wantsVideo);
-    showPage('speaking-page');
-    startTimer();
+      const call = peer.call(targetId, localStream);
+      activeCall = call;
 
-    call.on('stream', remoteStream => {
-      attachRemoteStream(remoteStream);
-    });
+      setupActiveCallView(wantsVideo);
+      showPage('speaking-page');
+      startTimer();
 
-    call.on('close', resetToDialPage);
+      call.on('stream', remoteStream => {
+        attachRemoteStream(remoteStream);
+      });
+
+      call.on('close', resetToDialPage);
+    }
   }
 
   async function acceptCall() {
@@ -436,15 +547,77 @@
     activeCall.on('close', resetToDialPage);
   }
 
+  function setupDataConnection() {
+    if (!dataConnection) return;
+    
+    dataConnection.on('open', () => {
+      appendChatMessage("Connected to " + dataConnection.peer, "system");
+      document.getElementById('call-timer').innerText = "Chat with: " + dataConnection.peer;
+    });
+
+    dataConnection.on('data', data => {
+      appendChatMessage(data, 'them');
+    });
+
+    dataConnection.on('close', () => {
+      appendChatMessage("Connection closed.", "system");
+    });
+  }
+
+  function sendChatMessage() {
+    const input = document.getElementById('chat-msg-input');
+    const msg = input.value.trim();
+    if (!msg) return;
+
+    if (dataConnection && dataConnection.open) {
+      dataConnection.send(msg);
+      appendChatMessage(msg, 'me');
+      input.value = '';
+    } else {
+      const targetId = document.getElementById('display').value.trim() || targetPeerId;
+      if (targetId && peer) {
+        appendChatMessage("Sending... Connecting to target.", "system");
+        dataConnection = peer.connect(targetId);
+        setupDataConnection();
+        dataConnection.on('open', () => {
+          dataConnection.send(msg);
+          appendChatMessage(msg, 'me');
+          input.value = '';
+        });
+      } else {
+        appendChatMessage("Please enter a Target ID on the main screen first.", "system");
+      }
+    }
+  }
+
+  function shareIDInChat() {
+    if (currentCallerId) {
+      const msg = "My Permanent Caller ID is: " + currentCallerId;
+      document.getElementById('chat-msg-input').value = msg;
+      sendChatMessage();
+    }
+  }
+
+  function appendChatMessage(text, sender) {
+    const box = document.getElementById('chat-messages');
+    const msgEl = document.createElement('div');
+    msgEl.className = `msg ${sender}`;
+    msgEl.innerText = text;
+    box.appendChild(msgEl);
+    box.scrollTop = box.scrollHeight;
+  }
+
   async function updateLocalMediaStream(includeVideo) {
     if (localStream) {
       localStream.getTracks().forEach(track => track.stop());
     }
-    localStream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
-      video: includeVideo ? { facingMode: facingMode } : false
-    });
-    document.getElementById('local-video').srcObject = localStream;
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: includeVideo ? { facingMode: facingMode } : false
+      });
+      document.getElementById('local-video').srcObject = localStream;
+    } catch(e) {}
   }
 
   function attachRemoteStream(remoteStream) {
@@ -456,6 +629,9 @@
   }
 
   function setupActiveCallView(hasVideo) {
+    document.getElementById('call-controls').style.display = 'grid';
+    document.getElementById('btn-leave').innerText = "End Call";
+
     const videoViewport = document.getElementById('video-container');
     const audioAvatar = document.getElementById('audio-avatar');
     if (hasVideo) {
@@ -491,19 +667,19 @@
 
   async function flipCamera() {
     facingMode = (facingMode === "user") ? "environment" : "user";
-    const videoTrack = localStream.getVideoTracks()[0];
+    const videoTrack = localStream ? localStream.getVideoTracks()[0] : null;
     const isVideoEnabled = videoTrack ? videoTrack.enabled : true;
 
     await updateLocalMediaStream(true);
 
     if (activeCall) {
       const videoSender = activeCall.peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
-      if (videoSender) {
+      if (videoSender && localStream.getVideoTracks()[0]) {
         videoSender.replaceTrack(localStream.getVideoTracks()[0]);
       }
     }
     
-    if (!isVideoEnabled) {
+    if (!isVideoEnabled && localStream && localStream.getVideoTracks()[0]) {
       localStream.getVideoTracks()[0].enabled = false;
     }
   }
@@ -517,86 +693,8 @@
   function hangUp() {
     stopRingtone();
     if (activeCall) activeCall.close();
+    if (dataConnection) dataConnection.close();
     resetToDialPage();
   }
 
-  function resetToDialPage() {
-    stopTimer();
-    showPage('dial-page');
-    activeCall = null;
-    incomingCallInstance = null;
-  }
-
-  function startTimer() {
-    secondsElapsed = 0;
-    document.getElementById('call-timer').innerText = "00:00";
-    clearInterval(callTimerInterval);
-    callTimerInterval = setInterval(() => {
-      secondsElapsed++;
-      const mins = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
-      const secs = String(secondsElapsed % 60).padStart(2, '0');
-      document.getElementById('call-timer').innerText = `${mins}:${secs}`;
-    }, 1000);
-  }
-
-  function stopTimer() {
-    clearInterval(callTimerInterval);
-  }
-
-  function playRingtone() {
-    try {
-      ringtoneAudioContext = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ringtoneAudioContext.createOscillator();
-      const gain = ringtoneAudioContext.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(440, ringtoneAudioContext.currentTime);
-      gain.gain.setValueAtTime(0.1, ringtoneAudioContext.currentTime);
-      osc.connect(gain);
-      gain.connect(ringtoneAudioContext.destination);
-      osc.start();
-      osc.stop(ringtoneAudioContext.currentTime + 3);
-    } catch(e) {}
-  }
-
-  function stopRingtone() {
-    if (ringtoneAudioContext) {
-      ringtoneAudioContext.close();
-      ringtoneAudioContext = null;
-    }
-  }
-
-  function changePermanentID() {
-    const newId = prompt("Enter a custom Permanent ID:", currentCallerId);
-    if (newId && newId.trim() !== "" && newId !== currentCallerId) {
-      const cleanId = newId.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
-      if (cleanId.length === 0) return alert("Invalid ID format.");
-      localStorage.setItem('dialer_permanent_id', cleanId);
-      if (peer) peer.destroy();
-      initPermanentPeer();
-    }
-  }
-
-  async function copyCallerID() {
-    if (!currentCallerId) return;
-    try {
-      await navigator.clipboard.writeText(currentCallerId);
-      const btn = document.getElementById('copy-btn');
-      btn.innerText = "Copied!";
-      setTimeout(() => { btn.innerText = "Copy"; }, 2000);
-    } catch (err) {
-      alert("Please copy the ID manually.");
-    }
-  }
-
-  async function pasteFromClipboard() {
-    try {
-      const text = await navigator.clipboard.readText();
-      document.getElementById('display').value = text.trim();
-    } catch (err) {
-      alert("Please long-press the target field to paste.");
-    }
-  }
-</script>
-
-</body>
-</html>
+  funct
