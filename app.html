@@ -1,1 +1,207 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Data Dialer App</title>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <style>
+    * { box-sizing: border-box; font-family: sans-serif; }
+    body {
+      background-color: #121212;
+      color: #ffffff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+    .dialer-card {
+      background: #1e1e1e;
+      border-radius: 20px;
+      padding: 24px;
+      width: 320px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      text-align: center;
+    }
+    .id-banner {
+      background: #2a2a2a;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 16px;
+    }
+    .id-label {
+      font-size: 0.75rem;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+    .id-value {
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #29b6f6;
+      word-break: break-all;
+    }
+    .display {
+      width: 100%;
+      height: 50px;
+      background: #2a2a2a;
+      border: 1px solid #444;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 1.2rem;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .keypad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .key {
+      background: #2c2c2c;
+      border: none;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      margin: auto;
+      font-size: 1.2rem;
+      color: #fff;
+      cursor: pointer;
+    }
+    .key:active { background: #444; }
+    .actions { display: flex; gap: 10px; }
+    .btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 25px;
+      font-weight: bold;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    .btn-call { background: #00c853; color: white; }
+    .btn-hangup { background: #d50000; color: white; }
+  </style>
+</head>
+<body>
+
+<div class="dialer-card">
+  <h3>Web Data Dialer</h3>
+
+  <div class="id-banner">
+    <div class="id-label">Your Caller ID</div>
+    <div id="my-id" class="id-value">Requesting Mic Access...</div>
+  </div>
+  
+  <input type="text" id="display" class="display" placeholder="Enter Target ID" readonly />
+
+  <div class="keypad">
+    <button class="key" onclick="append('1')">1</button>
+    <button class="key" onclick="append('2')">2</button>
+    <button class="key" onclick="append('3')">3</button>
+    <button class="key" onclick="append('4')">4</button>
+    <button class="key" onclick="append('5')">5</button>
+    <button class="key" onclick="append('6')">6</button>
+    <button class="key" onclick="append('7')">7</button>
+    <button class="key" onclick="append('8')">8</button>
+    <button class="key" onclick="append('9')">9</button>
+    <button class="key" onclick="append('-')">-</button>
+    <button class="key" onclick="append('0')">0</button>
+    <button class="key" onclick="clearDisplay()">⌫</button>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-call" onclick="makeCall()">Call</button>
+    <button class="btn btn-hangup" onclick="hangUp()">End</button>
+  </div>
+  
+  <audio id="remote-audio" autoplay></audio>
+</div>
+
+<script>
+  let peer;
+  let activeCall;
+  let localStream;
+
+  // Triggers browser's native permission prompt immediately on page load
+  window.addEventListener('DOMContentLoaded', () => {
+    promptMicrophonePermission();
+  });
+
+  function promptMicrophonePermission() {
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(stream => {
+        localStream = stream;
+        document.getElementById('my-id').innerText = "Connecting...";
+        initPeer();
+      })
+      .catch(err => {
+        const idElement = document.getElementById('my-id');
+        idElement.innerText = "Tap Here to Allow Mic";
+        idElement.style.color = "#ff9800";
+        idElement.style.cursor = "pointer";
+        // Manual tap fallback for strict mobile browser security
+        idElement.onclick = promptMicrophonePermission;
+      });
+  }
+
+  function initPeer() {
+    peer = new Peer();
+
+    peer.on('open', id => {
+      const idElement = document.getElementById('my-id');
+      idElement.innerText = id;
+      idElement.style.color = "#00e676";
+      idElement.onclick = null;
+    });
+
+    peer.on('call', call => {
+      call.answer(localStream);
+      activeCall = call;
+      call.on('stream', remoteStream => {
+        document.getElementById('remote-audio').srcObject = remoteStream;
+      });
+    });
+
+    peer.on('error', err => {
+      const idElement = document.getElementById('my-id');
+      idElement.innerText = "Connection Error";
+      idElement.style.color = "#ff5252";
+    });
+  }
+
+  function append(val) {
+    document.getElementById('display').value += val;
+  }
+
+  function clearDisplay() {
+    let current = document.getElementById('display').value;
+    document.getElementById('display').value = current.slice(0, -1);
+  }
+
+  function makeCall() {
+    const targetId = document.getElementById('display').value.trim();
+    if (!targetId || !localStream) return;
+
+    const call = peer.call(targetId, localStream);
+    activeCall = call;
+
+    call.on('stream', remoteStream => {
+      document.getElementById('remote-audio').srcObject = remoteStream;
+    });
+  }
+
+  function hangUp() {
+    if (activeCall) {
+      activeCall.close();
+    }
+  }
+</script>
+
+</body>
+</html>
