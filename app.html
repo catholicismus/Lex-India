@@ -6,7 +6,10 @@
   <title>Data Dialer App</title>
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
-    * { box-sizing: border-box; font-family: sans-serif; }
+    * {
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
     body {
       background-color: #121212;
       color: #ffffff;
@@ -21,14 +24,22 @@
       background: #1e1e1e;
       border-radius: 20px;
       padding: 24px;
-      width: 360px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      width: 100%;
+      max-width: 360px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
       text-align: center;
+    }
+    .app-title {
+      margin-top: 0;
+      margin-bottom: 20px;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #e0e0e0;
     }
     .id-banner {
       background: #2a2a2a;
       border: 1px solid #333;
-      border-radius: 10px;
+      border-radius: 12px;
       padding: 12px;
       margin-bottom: 20px;
     }
@@ -48,23 +59,24 @@
     .id-value {
       font-size: 0.95rem;
       font-weight: bold;
-      color: #29b6f6;
+      color: #00e676;
       word-break: break-all;
       text-align: left;
       flex: 1;
     }
-    .btn-copy {
+    .btn-action {
       background: #333;
       border: 1px solid #444;
       border-radius: 6px;
-      color: #00e676;
+      color: #29b6f6;
       font-weight: bold;
       font-size: 0.8rem;
       padding: 6px 10px;
       cursor: pointer;
       white-space: nowrap;
+      transition: background 0.2s;
     }
-    .btn-copy:active { background: #444; }
+    .btn-action:active { background: #444; }
 
     .display-container {
       display: flex;
@@ -73,35 +85,23 @@
     }
     .display {
       flex: 1;
-      height: 50px;
+      height: 48px;
       background: #2a2a2a;
       border: 1px solid #444;
       border-radius: 8px;
       color: #fff;
       font-size: 0.95rem;
       text-align: center;
-      padding: 0 8px;
+      padding: 0 12px;
     }
     .display:focus {
-      outline: 1px solid #29b6f6;
+      outline: none;
       border-color: #29b6f6;
     }
-    .btn-paste {
-      background: #333;
-      border: 1px solid #444;
-      border-radius: 8px;
-      color: #29b6f6;
-      font-weight: bold;
-      padding: 0 12px;
-      cursor: pointer;
-    }
-    .btn-paste:active { background: #444; }
 
-    /* Page Views */
     .page-view { display: none; }
     .page-view.active { display: block; }
 
-    /* Speaking & Calling Visuals */
     .call-avatar {
       width: 80px;
       height: 80px;
@@ -134,7 +134,6 @@
       margin-bottom: 24px;
     }
 
-    /* Buttons */
     .actions { display: flex; gap: 12px; }
     .btn {
       flex: 1;
@@ -144,7 +143,9 @@
       font-weight: bold;
       font-size: 1rem;
       cursor: pointer;
+      transition: opacity 0.2s;
     }
+    .btn:active { opacity: 0.8; }
     .btn-call { background: #00c853; color: white; }
     .btn-accept { background: #00c853; color: white; }
     .btn-reject { background: #d50000; color: white; }
@@ -154,20 +155,22 @@
 <body>
 
 <div class="dialer-card">
-  <h3>Web Data Dialer</h3>
+  <h3 class="app-title">Web Data Dialer</h3>
 
+  <!-- 1. DIAL PAGE -->
   <div id="dial-page" class="page-view active">
     <div class="id-banner">
-      <div class="id-label">Your Caller ID</div>
+      <div class="id-label">Permanent Caller ID</div>
       <div class="id-row">
-        <div id="my-id" class="id-value">Requesting Mic Access...</div>
-        <button id="copy-btn" class="btn-copy" onclick="copyCallerID()" style="display:none;">Copy</button>
+        <div id="my-id" class="id-value">Connecting...</div>
+        <button id="copy-btn" class="btn-action" onclick="copyCallerID()">Copy</button>
+        <button class="btn-action" onclick="changePermanentID()">Edit</button>
       </div>
     </div>
     
     <div class="display-container">
-      <input type="text" id="display" class="display" placeholder="Tap to enter Target ID" />
-      <button class="btn-paste" onclick="pasteFromClipboard()">Paste</button>
+      <input type="text" id="display" class="display" placeholder="Enter Target ID" />
+      <button class="btn-action" onclick="pasteFromClipboard()">Paste</button>
     </div>
 
     <div class="actions">
@@ -175,6 +178,7 @@
     </div>
   </div>
 
+  <!-- 2. INCOMING CALL PAGE -->
   <div id="receive-page" class="page-view">
     <div class="call-avatar incoming-avatar">📞</div>
     <div class="call-status-text">Incoming Call...</div>
@@ -186,6 +190,7 @@
     </div>
   </div>
 
+  <!-- 3. SPEAKING PAGE -->
   <div id="speaking-page" class="page-view">
     <div class="call-avatar">🎙️</div>
     <div class="call-status-text">In Conversation</div>
@@ -217,8 +222,8 @@
     navigator.mediaDevices.getUserMedia({ audio: true })
       .then(stream => {
         localStream = stream;
-        document.getElementById('my-id').innerText = "Connecting...";
-        initPeer();
+        document.getElementById('my-id').innerText = "Initializing ID...";
+        initPermanentPeer();
       })
       .catch(err => {
         const idElement = document.getElementById('my-id');
@@ -229,8 +234,19 @@
       });
   }
 
-  function initPeer() {
-    peer = new Peer();
+  function getPermanentID() {
+    let storedId = localStorage.getItem('dialer_permanent_id');
+    if (!storedId) {
+      storedId = 'user-' + Math.random().toString(36).substring(2, 7);
+      localStorage.setItem('dialer_permanent_id', storedId);
+    }
+    return storedId;
+  }
+
+  function initPermanentPeer() {
+    const permanentId = getPermanentID();
+
+    peer = new Peer(permanentId);
 
     peer.on('open', id => {
       currentCallerId = id;
@@ -238,7 +254,6 @@
       idElement.innerText = id;
       idElement.style.color = "#00e676";
       idElement.onclick = null;
-      document.getElementById('copy-btn').style.display = "block";
     });
 
     peer.on('call', call => {
@@ -249,11 +264,30 @@
     });
 
     peer.on('error', err => {
-      const idElement = document.getElementById('my-id');
-      idElement.innerText = "Connection Error";
-      idElement.style.color = "#ff5252";
-      document.getElementById('copy-btn').style.display = "none";
+      if (err.type === 'unavailable-id') {
+        alert("This Permanent ID is already active on another device/tab. Assigning a new ID.");
+        localStorage.removeItem('dialer_permanent_id');
+        initPermanentPeer();
+      } else {
+        const idElement = document.getElementById('my-id');
+        idElement.innerText = "Connection Error";
+        idElement.style.color = "#ff5252";
+      }
     });
+  }
+
+  function changePermanentID() {
+    const newId = prompt("Enter a custom Permanent ID (letters, numbers, hyphens only):", currentCallerId);
+    if (newId && newId.trim() !== "" && newId !== currentCallerId) {
+      const cleanId = newId.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+      if (cleanId.length === 0) {
+        alert("Invalid ID format.");
+        return;
+      }
+      localStorage.setItem('dialer_permanent_id', cleanId);
+      if (peer) peer.destroy();
+      initPermanentPeer();
+    }
   }
 
   function showPage(pageId) {
@@ -322,7 +356,6 @@
     incomingCallInstance = null;
   }
 
-  /* Timer Logic */
   function startTimer() {
     secondsElapsed = 0;
     document.getElementById('call-timer').innerText = "00:00";
@@ -339,7 +372,6 @@
     clearInterval(callTimerInterval);
   }
 
-  /* Generated Tone Sound */
   function playRingtone() {
     try {
       ringtoneAudioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -362,7 +394,6 @@
     }
   }
 
-  /* Utilities */
   async function copyCallerID() {
     if (!currentCallerId) return;
     try {
@@ -371,7 +402,7 @@
       btn.innerText = "Copied!";
       setTimeout(() => { btn.innerText = "Copy"; }, 2000);
     } catch (err) {
-      alert("Failed to copy automatically.");
+      alert("Please copy the ID manually.");
     }
   }
 
@@ -380,7 +411,7 @@
       const text = await navigator.clipboard.readText();
       document.getElementById('display').value = text.trim();
     } catch (err) {
-      alert("Please manually paste using system long-press.");
+      alert("Please long-press the target field to paste.");
     }
   }
 </script>
