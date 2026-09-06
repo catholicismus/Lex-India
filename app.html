@@ -37,16 +37,42 @@
       color: #888;
       text-transform: uppercase;
       letter-spacing: 1px;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
+    }
+    .id-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
     }
     .id-value {
-      font-size: 1rem;
+      font-size: 0.95rem;
       font-weight: bold;
       color: #29b6f6;
       word-break: break-all;
+      text-align: left;
+      flex: 1;
+    }
+    .btn-copy {
+      background: #333;
+      border: 1px solid #444;
+      border-radius: 6px;
+      color: #00e676;
+      font-weight: bold;
+      font-size: 0.8rem;
+      padding: 6px 10px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-copy:active { background: #444; }
+
+    .display-container {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
     }
     .display {
-      width: 100%;
+      flex: 1;
       height: 50px;
       background: #2a2a2a;
       border: 1px solid #444;
@@ -54,16 +80,28 @@
       color: #fff;
       font-size: 0.95rem;
       text-align: center;
-      margin-bottom: 16px;
       padding: 0 8px;
     }
+    .display:focus {
+      outline: 1px solid #29b6f6;
+      border-color: #29b6f6;
+    }
+    .btn-paste {
+      background: #333;
+      border: 1px solid #444;
+      border-radius: 8px;
+      color: #29b6f6;
+      font-weight: bold;
+      padding: 0 12px;
+      cursor: pointer;
+    }
+    .btn-paste:active { background: #444; }
     
-    /* Numbers Row */
     .keypad-nums {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 10px;
-      margin-bottom: 12px;
+      margin-bottom: 20px;
     }
     .key-num {
       background: #2c2c2c;
@@ -74,25 +112,7 @@
       color: #fff;
       cursor: pointer;
     }
-    
-    /* Alphabet Keypad Grid */
-    .keypad-alpha {
-      display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 6px;
-      margin-bottom: 20px;
-    }
-    .key-alpha {
-      background: #252525;
-      border: none;
-      border-radius: 6px;
-      height: 36px;
-      font-size: 0.9rem;
-      color: #ddd;
-      cursor: pointer;
-    }
-
-    .key-num:active, .key-alpha:active { background: #444; }
+    .key-num:active { background: #444; }
 
     .actions { display: flex; gap: 10px; }
     .btn {
@@ -115,12 +135,17 @@
 
   <div class="id-banner">
     <div class="id-label">Your Caller ID</div>
-    <div id="my-id" class="id-value">Requesting Mic Access...</div>
+    <div class="id-row">
+      <div id="my-id" class="id-value">Requesting Mic Access...</div>
+      <button id="copy-btn" class="btn-copy" onclick="copyCallerID()" style="display:none;">Copy</button>
+    </div>
   </div>
   
-  <input type="text" id="display" class="display" placeholder="Enter Target ID" readonly />
+  <div class="display-container">
+    <input type="text" id="display" class="display" placeholder="Tap to type Target ID" />
+    <button class="btn-paste" onclick="pasteFromClipboard()">Paste</button>
+  </div>
 
-  <!-- Numbers & Controls Grid -->
   <div class="keypad-nums">
     <button class="key-num" onclick="append('1')">1</button>
     <button class="key-num" onclick="append('2')">2</button>
@@ -136,36 +161,6 @@
     <button class="key-num" onclick="clearDisplay()">⌫</button>
   </div>
 
-  <!-- Full Alphabet Grid -->
-  <div class="keypad-alpha">
-    <button class="key-alpha" onclick="append('a')">a</button>
-    <button class="key-alpha" onclick="append('b')">b</button>
-    <button class="key-alpha" onclick="append('c')">c</button>
-    <button class="key-alpha" onclick="append('d')">d</button>
-    <button class="key-alpha" onclick="append('e')">e</button>
-    <button class="key-alpha" onclick="append('f')">f</button>
-    <button class="key-alpha" onclick="append('g')">g</button>
-    <button class="key-alpha" onclick="append('h')">h</button>
-    <button class="key-alpha" onclick="append('i')">i</button>
-    <button class="key-alpha" onclick="append('j')">j</button>
-    <button class="key-alpha" onclick="append('k')">k</button>
-    <button class="key-alpha" onclick="append('l')">l</button>
-    <button class="key-alpha" onclick="append('m')">m</button>
-    <button class="key-alpha" onclick="append('n')">n</button>
-    <button class="key-alpha" onclick="append('o')">o</button>
-    <button class="key-alpha" onclick="append('p')">p</button>
-    <button class="key-alpha" onclick="append('q')">q</button>
-    <button class="key-alpha" onclick="append('r')">r</button>
-    <button class="key-alpha" onclick="append('s')">s</button>
-    <button class="key-alpha" onclick="append('t')">t</button>
-    <button class="key-alpha" onclick="append('u')">u</button>
-    <button class="key-alpha" onclick="append('v')">v</button>
-    <button class="key-alpha" onclick="append('w')">w</button>
-    <button class="key-alpha" onclick="append('x')">x</button>
-    <button class="key-alpha" onclick="append('y')">y</button>
-    <button class="key-alpha" onclick="append('z')">z</button>
-  </div>
-
   <div class="actions">
     <button class="btn btn-call" onclick="makeCall()">Call</button>
     <button class="btn btn-hangup" onclick="hangUp()">End</button>
@@ -178,6 +173,7 @@
   let peer;
   let activeCall;
   let localStream;
+  let currentCallerId = "";
 
   window.addEventListener('DOMContentLoaded', () => {
     promptMicrophonePermission();
@@ -203,10 +199,12 @@
     peer = new Peer();
 
     peer.on('open', id => {
+      currentCallerId = id;
       const idElement = document.getElementById('my-id');
       idElement.innerText = id;
       idElement.style.color = "#00e676";
       idElement.onclick = null;
+      document.getElementById('copy-btn').style.display = "block";
     });
 
     peer.on('call', call => {
@@ -221,7 +219,20 @@
       const idElement = document.getElementById('my-id');
       idElement.innerText = "Connection Error";
       idElement.style.color = "#ff5252";
+      document.getElementById('copy-btn').style.display = "none";
     });
+  }
+
+  async function copyCallerID() {
+    if (!currentCallerId) return;
+    try {
+      await navigator.clipboard.writeText(currentCallerId);
+      const btn = document.getElementById('copy-btn');
+      btn.innerText = "Copied!";
+      setTimeout(() => { btn.innerText = "Copy"; }, 2000);
+    } catch (err) {
+      alert("Failed to copy automatically. Please select text manually.");
+    }
   }
 
   function append(val) {
@@ -231,6 +242,15 @@
   function clearDisplay() {
     let current = document.getElementById('display').value;
     document.getElementById('display').value = current.slice(0, -1);
+  }
+
+  async function pasteFromClipboard() {
+    try {
+      const text = await navigator.clipboard.readText();
+      document.getElementById('display').value = text.trim();
+    } catch (err) {
+      alert("Please manually paste using system long-press.");
+    }
   }
 
   function makeCall() {
