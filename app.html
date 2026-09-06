@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -16,12 +15,13 @@
       align-items: center;
       min-height: 100vh;
       margin: 0;
+      padding: 16px;
     }
     .dialer-card {
       background: #1e1e1e;
       border-radius: 20px;
       padding: 24px;
-      width: 320px;
+      width: 360px;
       box-shadow: 0 10px 25px rgba(0,0,0,0.5);
       text-align: center;
     }
@@ -40,7 +40,7 @@
       margin-bottom: 4px;
     }
     .id-value {
-      font-size: 1.1rem;
+      font-size: 1rem;
       font-weight: bold;
       color: #29b6f6;
       word-break: break-all;
@@ -52,28 +52,48 @@
       border: 1px solid #444;
       border-radius: 8px;
       color: #fff;
-      font-size: 1.2rem;
+      font-size: 0.95rem;
       text-align: center;
       margin-bottom: 16px;
+      padding: 0 8px;
     }
-    .keypad {
+    
+    /* Numbers Row */
+    .keypad-nums {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      margin-bottom: 20px;
+      gap: 10px;
+      margin-bottom: 12px;
     }
-    .key {
+    .key-num {
       background: #2c2c2c;
       border: none;
-      border-radius: 50%;
-      width: 60px;
-      height: 60px;
-      margin: auto;
+      border-radius: 12px;
+      height: 48px;
       font-size: 1.2rem;
       color: #fff;
       cursor: pointer;
     }
-    .key:active { background: #444; }
+    
+    /* Alphabet Keypad Grid */
+    .keypad-alpha {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 6px;
+      margin-bottom: 20px;
+    }
+    .key-alpha {
+      background: #252525;
+      border: none;
+      border-radius: 6px;
+      height: 36px;
+      font-size: 0.9rem;
+      color: #ddd;
+      cursor: pointer;
+    }
+
+    .key-num:active, .key-alpha:active { background: #444; }
+
     .actions { display: flex; gap: 10px; }
     .btn {
       flex: 1;
@@ -100,19 +120,50 @@
   
   <input type="text" id="display" class="display" placeholder="Enter Target ID" readonly />
 
-  <div class="keypad">
-    <button class="key" onclick="append('1')">1</button>
-    <button class="key" onclick="append('2')">2</button>
-    <button class="key" onclick="append('3')">3</button>
-    <button class="key" onclick="append('4')">4</button>
-    <button class="key" onclick="append('5')">5</button>
-    <button class="key" onclick="append('6')">6</button>
-    <button class="key" onclick="append('7')">7</button>
-    <button class="key" onclick="append('8')">8</button>
-    <button class="key" onclick="append('9')">9</button>
-    <button class="key" onclick="append('-')">-</button>
-    <button class="key" onclick="append('0')">0</button>
-    <button class="key" onclick="clearDisplay()">⌫</button>
+  <!-- Numbers & Controls Grid -->
+  <div class="keypad-nums">
+    <button class="key-num" onclick="append('1')">1</button>
+    <button class="key-num" onclick="append('2')">2</button>
+    <button class="key-num" onclick="append('3')">3</button>
+    <button class="key-num" onclick="append('4')">4</button>
+    <button class="key-num" onclick="append('5')">5</button>
+    <button class="key-num" onclick="append('6')">6</button>
+    <button class="key-num" onclick="append('7')">7</button>
+    <button class="key-num" onclick="append('8')">8</button>
+    <button class="key-num" onclick="append('9')">9</button>
+    <button class="key-num" onclick="append('-')">-</button>
+    <button class="key-num" onclick="append('0')">0</button>
+    <button class="key-num" onclick="clearDisplay()">⌫</button>
+  </div>
+
+  <!-- Full Alphabet Grid -->
+  <div class="keypad-alpha">
+    <button class="key-alpha" onclick="append('a')">a</button>
+    <button class="key-alpha" onclick="append('b')">b</button>
+    <button class="key-alpha" onclick="append('c')">c</button>
+    <button class="key-alpha" onclick="append('d')">d</button>
+    <button class="key-alpha" onclick="append('e')">e</button>
+    <button class="key-alpha" onclick="append('f')">f</button>
+    <button class="key-alpha" onclick="append('g')">g</button>
+    <button class="key-alpha" onclick="append('h')">h</button>
+    <button class="key-alpha" onclick="append('i')">i</button>
+    <button class="key-alpha" onclick="append('j')">j</button>
+    <button class="key-alpha" onclick="append('k')">k</button>
+    <button class="key-alpha" onclick="append('l')">l</button>
+    <button class="key-alpha" onclick="append('m')">m</button>
+    <button class="key-alpha" onclick="append('n')">n</button>
+    <button class="key-alpha" onclick="append('o')">o</button>
+    <button class="key-alpha" onclick="append('p')">p</button>
+    <button class="key-alpha" onclick="append('q')">q</button>
+    <button class="key-alpha" onclick="append('r')">r</button>
+    <button class="key-alpha" onclick="append('s')">s</button>
+    <button class="key-alpha" onclick="append('t')">t</button>
+    <button class="key-alpha" onclick="append('u')">u</button>
+    <button class="key-alpha" onclick="append('v')">v</button>
+    <button class="key-alpha" onclick="append('w')">w</button>
+    <button class="key-alpha" onclick="append('x')">x</button>
+    <button class="key-alpha" onclick="append('y')">y</button>
+    <button class="key-alpha" onclick="append('z')">z</button>
   </div>
 
   <div class="actions">
@@ -128,7 +179,6 @@
   let activeCall;
   let localStream;
 
-  // Triggers browser's native permission prompt immediately on page load
   window.addEventListener('DOMContentLoaded', () => {
     promptMicrophonePermission();
   });
@@ -145,7 +195,6 @@
         idElement.innerText = "Tap Here to Allow Mic";
         idElement.style.color = "#ff9800";
         idElement.style.cursor = "pointer";
-        // Manual tap fallback for strict mobile browser security
         idElement.onclick = promptMicrophonePermission;
       });
   }
